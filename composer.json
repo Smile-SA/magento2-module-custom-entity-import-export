@@ -1,5 +1,5 @@
 {
-  "name": "smile/module-import-custom-entity",
+  "name": "smile/module-custom-entity-import-export",
   "type": "magento2-module",
   "description": "Smile - Import Custom Entity Module",
   "keywords": ["magento2", "custom", "entity", "import"],
@@ -25,7 +25,7 @@
       "registration.php"
     ],
     "psr-4": {
-      "Smile\\ImportCustomEntity\\" : ""
+      "Smile\\CustomEntityImportExport\\" : ""
     }
   },
   "minimum-stability": "dev",
