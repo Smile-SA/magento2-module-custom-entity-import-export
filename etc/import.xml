@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * DISCLAIMER
+ *
+ * Do not edit or add to this file if you wish to upgrade this module to newer
+ * versions in the future.
+ *
+ *
+ * @category  Smile
+ * @package   Smile\CustomEntityImportExport
+ * @author    Pierre Met <pierre.met@smile.fr>
+ * @copyright 2019 Smile
+ * @license   Open Software License ("OSL") v. 3.0
+ */
+ -->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_ImportExport:etc/import.xsd">
+    <entity name="smile_custom_entity" label="Smile Entity" model="Smile\CustomEntityImportExport\Model\Import\CustomEntity" behaviorModel="Smile\CustomEntityImportExport\Model\Source\Import\Behavior\AddUpdateBasic" />
+</config>
