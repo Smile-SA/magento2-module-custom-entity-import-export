@@ -15,5 +15,5 @@
  */
  -->
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_ImportExport:etc/import.xsd">
-    <entity name="smile_custom_entity" label="Smile Entity" model="Smile\CustomEntityImportExport\Model\Import\CustomEntity" behaviorModel="Smile\CustomEntityImportExport\Model\Source\Import\Behavior\AddUpdateBasic" />
+    <entity name="smile_custom_entity" label="Custom Entity" model="Smile\CustomEntityImportExport\Model\Import\CustomEntity" behaviorModel="Smile\CustomEntityImportExport\Model\Source\Import\Behavior\AddUpdateBasic" />
 </config>
