@@ -27,7 +27,7 @@ use Magento\Eav\Model\ResourceModel\Entity\Attribute\Set\CollectionFactory;
 use Smile\CustomEntity\Api\CustomEntityRepositoryInterface;
 use Smile\CustomEntity\Api\Data\CustomEntityInterfaceFactory;
 use Magento\Framework\Api\SearchCriteriaBuilder;
-use Smile\ScopedEav\Model\Entity\FileInfo;
+use Magento\Catalog\Model\Category\FileInfo;
 use Magento\Framework\App\Filesystem\DirectoryList;
 use Magento\Framework\Filesystem;
 use Magento\ImportExport\Model\Import;
@@ -55,6 +55,7 @@ class CustomEntity extends AbstractEntity
     const IMAGE = 'image';
     const ATTRIBUTE_SET = 'attribute_set';
     const STORE_ID = 'store_id';
+    const DESTINATION_DIR = 'scoped_eav/entity';
 
     /** @var array */
     protected $_permanentAttributes = [
@@ -244,8 +245,9 @@ class CustomEntity extends AbstractEntity
 
                     $uploadedFile = $this->uploadMediaFiles($rowData[self::IMAGE]);
                     $uploadedFile = $uploadedFile ?: $this->getSystemFile($rowData[self::IMAGE]);
+                    $uploadedFile = DIRECTORY_SEPARATOR . DirectoryList::MEDIA . DIRECTORY_SEPARATOR . self::DESTINATION_DIR . DIRECTORY_SEPARATOR . $uploadedFile;
                     if ($uploadedFile) {
-                        $custom->setImage(ltrim($uploadedFile, DIRECTORY_SEPARATOR));
+                        $custom->setImage($uploadedFile);
                     }
                     $existCustomEntity = $this->existCustomEntity($rowData[self::NAME], $rowData[self::ATTRIBUTE_SET]);
                     if ($existCustomEntity) {
@@ -396,8 +398,7 @@ class CustomEntity extends AbstractEntity
                     __('File directory \'%1\' is not readable.', $tmpPath)
                 );
             }
-            $destinationDir = ltrim($this->importFile::ENTITY_MEDIA_PATH, DIRECTORY_SEPARATOR);
-            $destinationPath = $dirAddon.DIRECTORY_SEPARATOR.$this->mediaDirectory->getRelativePath($destinationDir);
+            $destinationPath = $dirAddon.DIRECTORY_SEPARATOR.$this->mediaDirectory->getRelativePath(self::DESTINATION_DIR);
 
             $this->mediaDirectory->create($destinationPath);
             if (!$this->fileUploader->setDestDir($destinationPath)) {
@@ -406,6 +407,8 @@ class CustomEntity extends AbstractEntity
                 );
             }
         }
+
+        $this->fileUploader->setFilesDispersion(false);
 
         return $this->fileUploader;
     }
@@ -440,7 +443,7 @@ class CustomEntity extends AbstractEntity
      */
     protected function getSystemFile($filename)
     {
-        $filePath = ltrim($this->importFile::ENTITY_MEDIA_PATH, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $filename;
+        $filePath = self::DESTINATION_DIR . DIRECTORY_SEPARATOR . $filename;
         /** @var \Magento\Framework\Filesystem\Directory\ReadInterface $read */
         $read = $this->filesystem->getDirectoryRead(DirectoryList::MEDIA);
 
