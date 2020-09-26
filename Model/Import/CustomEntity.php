@@ -27,7 +27,7 @@ use Magento\Eav\Model\ResourceModel\Entity\Attribute\Set\CollectionFactory;
 use Smile\CustomEntity\Api\CustomEntityRepositoryInterface;
 use Smile\CustomEntity\Api\Data\CustomEntityInterfaceFactory;
 use Magento\Framework\Api\SearchCriteriaBuilder;
-use Smile\ScopedEav\Model\Entity\FileInfo;
+use Magento\Catalog\Model\Category\FileInfo;
 use Magento\Framework\App\Filesystem\DirectoryList;
 use Magento\Framework\Filesystem;
 use Magento\ImportExport\Model\Import;
@@ -49,20 +49,15 @@ class CustomEntity extends AbstractEntity
     const ENTITY_TYPE = 'smile_custom_entity';
 
     const NAME = 'name';
-    const DESC = 'description';
     const IS_ACTIVE = 'is_active';
-    const URL_KEY = 'url_key';
-    const IMAGE = 'image';
     const ATTRIBUTE_SET = 'attribute_set';
     const STORE_ID = 'store_id';
+    const DESTINATION_DIR = 'scoped_eav/entity';
 
     /** @var array */
     protected $_permanentAttributes = [
         self::NAME,
-        self::DESC,
         self::IS_ACTIVE,
-        self::URL_KEY,
-        self::IMAGE,
         self::ATTRIBUTE_SET,
     ];
 
@@ -105,6 +100,12 @@ class CustomEntity extends AbstractEntity
     /** @var Config */
     protected $eavConfig;
 
+    /** @var \Smile\CustomEntity\Model\ResourceModel\CustomEntity\Attribute\CollectionFactory */
+    protected $customEntityCollectionFactory;
+
+    /** @var array */
+    protected $attributeCodesInSet = [];
+
     /**
      * CustomEntity constructor.
      *
@@ -140,6 +141,7 @@ class CustomEntity extends AbstractEntity
         CollectionFactory $attributeSetCollectionFactory,
         CustomEntityRepositoryInterface $entityRepositoryInterface,
         CustomEntityInterfaceFactory $customEntityFactory,
+        \Smile\CustomEntity\Model\ResourceModel\CustomEntity\Attribute\CollectionFactory $customEntityCollectionFactory,
         SearchCriteriaBuilder $searchCriteria,
         FileInfo $importFile,
         FileSystem $filesystem,
@@ -163,6 +165,7 @@ class CustomEntity extends AbstractEntity
         $this->eavConfig = $eavConfig;
         $this->mediaDirectory = $filesystem->getDirectoryWrite(DirectoryList::ROOT);
         $this->masterAttributeCode = self::NAME;
+        $this->customEntityCollectionFactory = $customEntityCollectionFactory;
     }
 
     /**
@@ -236,17 +239,31 @@ class CustomEntity extends AbstractEntity
                     /** @var \Smile\CustomEntity\Api\Data\CustomEntityInterface $custom */
                     $custom = $this->customEntityFactory->create();
                     $custom->setName($rowData[self::NAME]);
-                    $custom->setDescription($rowData[self::DESC]);
                     $custom->setIsActive((bool) $rowData[self::IS_ACTIVE]);
-                    $custom->setUrlKey($rowData[self::URL_KEY]);
                     $custom->setStoreId((int) $storeId);
-                    $custom->setAttributeSetId($this->getAttributeSetId($rowData[self::ATTRIBUTE_SET]));
+                    $setId = $this->getAttributeSetId($rowData[self::ATTRIBUTE_SET]);
+                    $custom->setAttributeSetId($setId);
 
-                    $uploadedFile = $this->uploadMediaFiles($rowData[self::IMAGE]);
-                    $uploadedFile = $uploadedFile ?: $this->getSystemFile($rowData[self::IMAGE]);
-                    if ($uploadedFile) {
-                        $custom->setImage(ltrim($uploadedFile, DIRECTORY_SEPARATOR));
+                    foreach ($this->getAttributeCodesInSet($setId) as $code => $frontendInput)
+                    {
+                        if (
+                            $code == self::NAME
+                            || $code == self::IS_ACTIVE
+                            || $code == self::STORE_ID
+                            || !isset($rowData[$code])
+                        ) continue;
+                        $value = $rowData[$code];
+                        if ($frontendInput == 'image') {
+                            $uploadedFile = $this->uploadMediaFiles($value);
+                            $uploadedFile = $uploadedFile ?: $this->getSystemFile($value);
+                            $uploadedFile = DIRECTORY_SEPARATOR . DirectoryList::MEDIA . DIRECTORY_SEPARATOR . self::DESTINATION_DIR . DIRECTORY_SEPARATOR . $uploadedFile;
+                            if ($uploadedFile) {
+                                $value = $uploadedFile;
+                            }
+                        }
+                        $custom->setData($code, $value);
                     }
+
                     $existCustomEntity = $this->existCustomEntity($rowData[self::NAME], $rowData[self::ATTRIBUTE_SET]);
                     if ($existCustomEntity) {
                         $custom->setId($existCustomEntity);
@@ -260,6 +277,19 @@ class CustomEntity extends AbstractEntity
                 }
             }
         }
+    }
+
+    public function getAttributeCodesInSet($setId)
+    {
+        if (!isset($this->attributeCodesInSet[$setId])) {
+            $attributesCollection = $this->customEntityCollectionFactory->create()
+                ->setAttributeSetFilter($setId);
+            foreach ($attributesCollection as $attribute) {
+                $this->attributeCodesInSet[$setId][$attribute->getAttributeCode()] = $attribute->getFrontendInput();
+            }
+        }
+
+        return $this->attributeCodesInSet[$setId];
     }
 
     /**
@@ -396,8 +426,7 @@ class CustomEntity extends AbstractEntity
                     __('File directory \'%1\' is not readable.', $tmpPath)
                 );
             }
-            $destinationDir = ltrim($this->importFile::ENTITY_MEDIA_PATH, DIRECTORY_SEPARATOR);
-            $destinationPath = $dirAddon.DIRECTORY_SEPARATOR.$this->mediaDirectory->getRelativePath($destinationDir);
+            $destinationPath = $dirAddon.DIRECTORY_SEPARATOR.$this->mediaDirectory->getRelativePath(self::DESTINATION_DIR);
 
             $this->mediaDirectory->create($destinationPath);
             if (!$this->fileUploader->setDestDir($destinationPath)) {
@@ -406,6 +435,8 @@ class CustomEntity extends AbstractEntity
                 );
             }
         }
+
+        $this->fileUploader->setFilesDispersion(false);
 
         return $this->fileUploader;
     }
@@ -440,7 +471,7 @@ class CustomEntity extends AbstractEntity
      */
     protected function getSystemFile($filename)
     {
-        $filePath = ltrim($this->importFile::ENTITY_MEDIA_PATH, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $filename;
+        $filePath = self::DESTINATION_DIR . DIRECTORY_SEPARATOR . $filename;
         /** @var \Magento\Framework\Filesystem\Directory\ReadInterface $read */
         $read = $this->filesystem->getDirectoryRead(DirectoryList::MEDIA);
 
