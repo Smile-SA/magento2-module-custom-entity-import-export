@@ -10,7 +10,7 @@
     }
   ],
   "require": {
-    "php": "~7.1.3||~7.2.0",
+    "php": ">=7.1.3",
     "smile/module-custom-entity": "dev-master"
   },
   "license": "OSL-3.0",
